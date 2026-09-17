@@ -1,0 +1,13 @@
+/node_modules/
+/.next/
+/out/
+/build/
+/coverage/
+/.vercel/
+/.filmstock-dev.*.log
+.env*
+!.env.example
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
+Thumbs.db
