@@ -1,4 +1,5 @@
-import type { Movie } from "@/types/movie";
+import type { Movie, MovieCover } from "@/types/movie";
+import { safeImageUrl } from "@/lib/movies/cover";
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -14,10 +15,12 @@ function propertyValue(value: unknown, type: string): unknown {
 function text(value: unknown, type: "title" | "rich_text"): string {
   const parts = propertyValue(value, type);
   if (!Array.isArray(parts)) return "";
-  return parts.map((part) => {
-    const plainText = record(part)?.plain_text;
-    return typeof plainText === "string" ? plainText : "";
-  }).join("");
+  return parts
+    .map((part) => {
+      const plainText = record(part)?.plain_text;
+      return typeof plainText === "string" ? plainText : "";
+    })
+    .join("");
 }
 
 function multiSelect(value: unknown): string[] {
@@ -41,10 +44,32 @@ function number(value: unknown): number | null {
   return typeof result === "number" && Number.isFinite(result) ? result : null;
 }
 
-export function mapNotionPageToMovie(page: { id: string; properties?: unknown }): Movie {
+export function mapCover(value: unknown): MovieCover | null {
+  const cover = record(value);
+  if (cover?.type !== "file" && cover?.type !== "external") return null;
+  const file = record(cover[cover.type]);
+  const url = safeImageUrl(file?.url);
+  if (!url) return null;
+  const expiry = file?.expiry_time;
+  return {
+    url,
+    type: cover.type,
+    expiresAt:
+      typeof expiry === "string" && Number.isFinite(Date.parse(expiry))
+        ? expiry
+        : null,
+  };
+}
+
+export function mapNotionPageToMovie(page: {
+  id: string;
+  properties?: unknown;
+  cover?: unknown;
+}): Movie {
   const properties = record(page.properties) ?? {};
   return {
     id: page.id,
+    cover: mapCover(page.cover),
     title: text(properties["이름"], "title"),
     director: text(properties["감독"], "rich_text"),
     actors: text(properties["배우"], "rich_text"),

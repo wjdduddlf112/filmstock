@@ -10,11 +10,12 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "dependencies": {
     "@notionhq/client": "latest",
     "next": "16.3.5",
+    "lucide-react": "^0.577.0",
     "react": "latest",
     "react-dom": "latest",
     "server-only": "^0.0.1"

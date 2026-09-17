@@ -1,5 +1,12 @@
+export type MovieCover = {
+  url: string;
+  type: "file" | "external";
+  expiresAt: string | null;
+};
+
 export type Movie = {
   id: string;
+  cover: MovieCover | null;
   title: string;
   director: string;
   actors: string;

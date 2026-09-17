@@ -1,0 +1,1 @@
+export const themeScript = `(function(){try{var t=localStorage.getItem('filmstock-theme-v1');document.documentElement.dataset.theme=(t==='dark'||t==='light')?t:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}})()`;

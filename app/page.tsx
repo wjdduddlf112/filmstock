@@ -1,36 +1,88 @@
-import { MovieCard } from "@/components/MovieCard";
-import { getMovies, logMovieLoadError } from "@/lib/notion/movies";
-import type { Movie } from "@/types/movie";
-
-export const dynamic = "force-dynamic";
-
+import Link from "next/link";
+import { connection } from "next/server";
+import { ArrowUpRight, ArrowRight } from "lucide-react";
+import { getMovies } from "@/lib/notion/movies";
+import { selectFeatured } from "@/lib/movies/discovery";
+import { movieHref } from "@/lib/movies/slug";
+import { usableCover } from "@/lib/movies/cover";
+import { Poster } from "@/components/movie/Poster";
+import { Rating } from "@/components/movie/Rating";
+import { MovieCard } from "@/components/movie/MovieCard";
+import { SearchForm } from "@/components/shared/SearchForm";
+import { EmptyState } from "@/components/shared/States";
+export const metadata = { alternates: { canonical: "/" } };
 export default async function Home() {
-  let movies: Movie[] = [];
-  let failed = false;
-  try {
-    movies = await getMovies();
-  } catch (error) {
-    failed = true;
-    logMovieLoadError(error);
-  }
-
+  await connection();
+  const movies = await getMovies();
+  const [featured, ...picks] = selectFeatured(movies);
   return (
-    <main className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
-      <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3 border-b border-zinc-300 pb-5">
-        <h1 className="text-3xl font-bold">FILM STOCK</h1>
-        {!failed && <p className="text-sm text-zinc-600">{movies.length}편의 영화</p>}
-      </header>
-      {failed ? (
-        <p role="alert" className="border-l-2 border-red-700 py-3 pl-4 text-sm text-red-800">
-          영화 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
-        </p>
-      ) : movies.length === 0 ? (
-        <p className="py-12 text-center text-zinc-600">아직 기록된 영화가 없습니다.</p>
+    <div className="shell home-page">
+      <div className="home-search">
+        <span className="eyebrow">A PERSONAL CINEMA ARCHIVE</span>
+        <SearchForm />
+      </div>
+      {featured ? (
+        <>
+          <section className="featured">
+            <div className="featured-poster">
+              <Link href={movieHref(featured)} prefetch={false}>
+                <Poster
+                  cover={usableCover(featured.cover)}
+                  title={featured.title}
+                  priority
+                  sizes="(max-width: 700px) 65vw, 330px"
+                />
+              </Link>
+            </div>
+            <div className="featured-copy">
+              <p className="eyebrow accent">IN THE SPOTLIGHT</p>
+              <h1>{featured.title || "제목 없음"}</h1>
+              <p className="featured-director">
+                {featured.director || "감독 미기록"}
+              </p>
+              <Rating rating={featured.rating} />
+              <p className="muted">
+                {featured.genres.join(" · ") || "장르 미기록"}
+              </p>
+              <blockquote>{featured.oneLineReview}</blockquote>
+              <Link
+                className="button"
+                href={movieHref(featured)}
+                prefetch={false}
+              >
+                영화 자세히 보기
+                <ArrowUpRight size={18} />
+              </Link>
+            </div>
+          </section>
+          {picks.length > 0 && (
+            <section className="home-picks">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">ANOTHER FRAME</p>
+                  <h2>우연히 만난 영화</h2>
+                </div>
+                <Link className="text-link" href="/films">
+                  모든 영화
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+              <div className="movie-grid home-grid">
+                {picks.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {movies.map((movie) => <li key={movie.id} className="min-w-0"><MovieCard movie={movie} /></li>)}
-        </ul>
+        <EmptyState
+          title={
+            movies.length ? "아직 한줄평이 기록되지 않았습니다." : undefined
+          }
+          reset={movies.length > 0}
+        />
       )}
-    </main>
+    </div>
   );
 }
