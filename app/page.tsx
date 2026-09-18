@@ -14,8 +14,7 @@ import { EmptyState } from "@/components/shared/States";
 export const metadata = { alternates: { canonical: "/" } };
 export default async function Home() {
   await connection();
-  const movies = await getMovies();
-  const published = await getPublishedIds();
+  const [movies, published] = await Promise.all([getMovies(), getPublishedIds()]);
   const [featured, ...picks] = selectHomeMovies(movies, published);
   return (
     <div className="shell home-page">

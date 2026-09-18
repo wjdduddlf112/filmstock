@@ -29,6 +29,7 @@ export function Poster({
           fill
           sizes={sizes}
           preload={priority}
+          loading={priority ? undefined : "lazy"}
           unoptimized={!optimized}
           referrerPolicy="no-referrer"
           onError={() => {

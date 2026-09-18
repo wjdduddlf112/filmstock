@@ -10,7 +10,7 @@ import { collectPages } from "./pagination";
 
 async function getCachedMovies(): Promise<Movie[]> {
   "use cache";
-  cacheLife({ stale: 60, revalidate: 300, expire: 900 });
+  cacheLife({ stale: 60, revalidate: 1200, expire: 1800 });
   cacheTag("filmstock-movies");
   const dataSourceId = process.env.NOTION_DATA_SOURCE_ID?.trim();
   if (!dataSourceId) throw new Error("Missing NOTION_DATA_SOURCE_ID");

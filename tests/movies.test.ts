@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mapNotionPageToMovie, mapCover } from "../lib/notion/mapper";
 import { shortId, movieSlug, parseMovieId } from "../lib/movies/slug";
-import { starFills } from "../lib/movies/rating";
+import { ratingToStars, starFills } from "../lib/movies/rating";
 import {
   normalizeSearch,
   parseCatalogState,
@@ -45,17 +45,24 @@ test("full UUID short IDs are stable and collision-free even for identical prefi
   assert.throws(() => shortId("invalid"));
 });
 
-test("stars support all half-step ratings, zero, and clamping", () => {
-  for (let rating = 0; rating <= 5; rating += 0.5)
-    assert.equal(starFills(rating).reduce((a, b) => a + b, 0) / 100, rating);
+test("stars follow every FILM STOCK range boundary without rounding", () => {
+  const ranges = [[10,14,1], [15,19,1.5], [20,24,2], [25,29,2.5],
+    [30,33,3], [34,38,3.5], [39,43,4], [44,46,4.5], [47,50,5]];
+  for (const [low, high, stars] of ranges) {
+    for (let tenth = low; tenth <= high; tenth++) {
+      assert.equal(ratingToStars(tenth / 10), stars);
+      assert.equal(starFills(tenth / 10).reduce((a, b) => a + b, 0) / 100, stars);
+    }
+  }
   assert.deepEqual(starFills(4.5), [100, 100, 100, 100, 50]);
-  assert.deepEqual(starFills(0), [0, 0, 0, 0, 0]);
-  assert.equal(
-    starFills(1.8).reduce((a, b) => a + b, 0),
-    200,
-  );
-  assert.deepEqual(starFills(NaN), starFills(0));
-  assert.deepEqual(starFills(8), starFills(5));
+  assert.deepEqual(starFills(3.8), [100, 100, 100, 50, 0]);
+});
+
+test("missing and out-of-range ratings do not invent a star rating", () => {
+  for (const rating of [null, undefined, NaN, Infinity, -1, 0, 0.5, 8]) {
+    assert.equal(ratingToStars(rating), null);
+    assert.deepEqual(starFills(rating), []);
+  }
 });
 
 test("search normalizes unicode, case, whitespace and searches all specified fields", () => {

@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { starFills } from "@/lib/movies/rating";
-export function Rating({ rating }: { rating: number | null }) {
-  if (rating === null) return <span className="unrated">평점 미기록</span>;
+export function Rating({ rating }: { rating: number | null | undefined }) {
+  if (rating == null || !Number.isFinite(rating)) return <span className="unrated">평점 미기록</span>;
   return (
     <span className="rating" aria-label={`5점 만점에 ${rating}점`}>
       <span className="stars" aria-hidden="true">

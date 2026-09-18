@@ -66,11 +66,13 @@ Server Component → `lib/notion/movies.ts`의 캐시된 dataset → cache miss 
 
 ## 캐싱 및 포스터
 
-Next.js 16 `cacheComponents`와 함수 단위 `use cache`를 사용합니다. dataset은 stale 60초, revalidate 300초, expire 900초이며 `filmstock-movies` tag를 부여합니다. React `cache`로 한 렌더 내 metadata/page의 중복 조회도 줄입니다. 실패한 부분 목록이나 빈 가짜 데이터를 정상 결과로 캐시하지 않습니다.
+Next.js 16 `cacheComponents`와 함수 단위 `use cache`를 사용합니다. dataset은 stale 60초, revalidate 1200초(20분), expire 1800초(30분)이며 `filmstock-movies` tag를 부여합니다. React `cache`로 한 렌더 내 metadata/page의 중복 조회도 줄입니다. 실패한 부분 목록이나 빈 가짜 데이터를 정상 결과로 캐시하지 않습니다.
 
 `connection()` 이후 랜덤 선택을 실행하므로 dataset 캐시와 랜덤 결과는 분리됩니다. Home 링크는 새 문서 탐색으로 요청하므로 새 방문/refresh마다 다른 조합이 가능하며, 랜덤 때문에 Notion 전체 API를 매번 호출하지 않습니다. 배포의 여러 인스턴스에서는 각 인스턴스의 cold cache가 별도로 채워질 수 있습니다.
 
-이전 검증 버전과 달리 **Notion 수정은 매 새로고침 즉시 반영되지 않을 수 있습니다.** 5분 후 요청이 background 재검증을 유발하고, 완료 후 새로고침하면 반영됩니다. 15분이 지난 cache는 새 조회를 기다립니다. 재배포나 코드 수정은 필요 없습니다. cold load는 여전히 전체 cursor 조회 시간이 필요합니다.
+**Notion 수정은 매 새로고침 즉시 반영되지 않을 수 있습니다.** 20분 후 요청이 background 재검증을 유발하고, 완료 후 새로고침하면 반영됩니다. 30분이 지난 cache는 새 조회를 기다립니다. 재배포나 코드 수정은 필요 없습니다. cold load는 여전히 전체 cursor 조회 시간이 필요합니다. Home/Films는 영화와 공개 리뷰 ID를 병렬 조회하며, Detail의 metadata/page는 같은 영화 dataset과 리뷰 조회를 요청 내 공유합니다. 리뷰 저장은 해당 Detail, Home, Films만 재검증하고 Notion tag는 무효화하지 않습니다.
+
+별점은 `ratingToStars`의 FILM STOCK 구간 매핑을 공통 Rating에서 사용합니다. 숫자 평점은 그대로 표시하며, 미입력/유효하지 않은 값과 정의되지 않은 1점 미만·5점 초과에는 별점을 만들지 않습니다.
 
 Notion file/external cover를 사용하며 signed URL과 expiry를 Movie에 매핑합니다. 30초 이내 만료되거나 이미 만료된 cover는 placeholder로 표시합니다. Next/Image 최적화는 제한된 Notion S3/Notion static/Unsplash 호스트에만 허용합니다. 다른 external URL은 서버 proxy 없이 브라우저가 원본을 로드합니다. 최적화 실패 시 원본을 한 번 시도하고, 원본도 실패하면 같은 2:3 비율의 placeholder로 대체합니다. 이미지 URL을 영구 저장하지 않으며, 오래 열어둔 화면은 새로고침하여 갱신합니다.
 

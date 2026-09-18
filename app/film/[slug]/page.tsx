@@ -28,11 +28,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = parseMovieId(slug);
   if (!id)
     return { title: "영화를 찾을 수 없습니다", robots: { index: false } };
-  const movie = (await getMovies()).find((m) => m.id.toLowerCase() === id);
+  const [movies, review] = await Promise.all([getMovies(), getPublishedReview(id)]);
+  const movie = movies.find((m) => m.id.toLowerCase() === id);
   if (!movie)
     return { title: "영화를 찾을 수 없습니다", robots: { index: false } };
   const title = movie.title || "제목 없음";
-  const review = await getPublishedReview(movie.id);
   const description = `${(movie.oneLineReview || `${title}의 영화 정보와 평점.`).slice(0, 140)}${review ? " FILM STOCK의 긴 리뷰를 만나보세요." : " FILM STOCK 개인 영화 아카이브."}`;
   return {
     title,
@@ -58,13 +58,13 @@ export default async function FilmDetail({ params }: Props) {
   const { slug } = await params;
   const id = parseMovieId(slug);
   if (!id) notFound();
-  const movies = await getMovies();
+  const [movies, review, published] = await Promise.all([
+    getMovies(), getPublishedReview(id), getPublishedIds(),
+  ]);
   const movie = movies.find((m) => m.id.toLowerCase() === id);
   if (!movie) notFound();
   if (!isCanonicalMovieSlug(slug, movie)) permanentRedirect(movieHref(movie));
   const related = relatedMovies(movie, movies);
-  const review = await getPublishedReview(movie.id);
-  const published = await getPublishedIds();
   const url = `${siteUrl()}${movieHref(movie)}`;
   const fields = [
     ["감독", movie.director],

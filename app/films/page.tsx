@@ -42,8 +42,7 @@ export default async function Films({
 }) {
   await connection();
   const state = parseCatalogState(await searchParams);
-  const movies = await getMovies();
-  const published = await getPublishedIds();
+  const [movies, published] = await Promise.all([getMovies(), getPublishedIds()]);
   const result = queryMovies(movies, state, published);
   if (result.page !== state.page)
     redirect(catalogHref({ ...state, page: result.page }));
