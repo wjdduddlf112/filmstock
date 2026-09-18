@@ -14,7 +14,7 @@ const links = [
   ["/stats", "Stats"],
   ["/about", "About"],
 ];
-export function Header() {
+export function Header({ account }: { account?: React.ReactNode }) {
   const path = usePathname();
   const dialog = useRef<HTMLDialogElement>(null);
   const active = (href: string) =>
@@ -56,6 +56,7 @@ export function Header() {
             <SearchForm compact />
           </div>
           <ThemeToggle />
+          {account}
           <button
             className="icon-button mobile-menu-button"
             type="button"

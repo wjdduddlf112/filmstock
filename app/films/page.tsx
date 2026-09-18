@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { X } from "lucide-react";
 import { getMovies } from "@/lib/notion/movies";
+import { getPublishedIds } from "@/lib/reviews/public";
 import {
   parseCatalogState,
   queryMovies,
@@ -42,7 +43,8 @@ export default async function Films({
   await connection();
   const state = parseCatalogState(await searchParams);
   const movies = await getMovies();
-  const result = queryMovies(movies, state);
+  const published = await getPublishedIds();
+  const result = queryMovies(movies, state, published);
   if (result.page !== state.page)
     redirect(catalogHref({ ...state, page: result.page }));
   const selected = (Object.keys(filterLabels) as FilterKey[]).filter(
@@ -81,7 +83,12 @@ export default async function Films({
                   className="filter-chip"
                   href={catalogHref({ ...state, [key]: "", page: 1 })}
                 >
-                  {filterLabels[key]}: {state[key]}
+                  {filterLabels[key]}:{" "}
+                  {key === "review"
+                    ? state[key] === "yes"
+                      ? "리뷰 있음"
+                      : "리뷰 없음"
+                    : state[key]}
                   <X size={14} />
                   <span className="sr-only">필터 제거</span>
                 </Link>
@@ -106,7 +113,11 @@ export default async function Films({
           {result.total ? (
             <div className="movie-grid archive-grid">
               {result.movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  hasReview={published.has(movie.id.toLowerCase())}
+                />
               ))}
             </div>
           ) : (

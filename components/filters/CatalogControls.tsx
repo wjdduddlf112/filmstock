@@ -32,7 +32,11 @@ function Fields({
           )}
           {options[key].map((value) => (
             <option key={value} value={value}>
-              {value}
+              {key === "review"
+                ? value === "yes"
+                  ? "리뷰 있음"
+                  : "리뷰 없음"
+                : value}
               {key === "rating" ? "점 이상" : ""}
             </option>
           ))}

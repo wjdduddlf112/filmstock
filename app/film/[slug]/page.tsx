@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { ReviewAction } from "@/components/admin/ReviewAction";
+import { getPublishedIds, getPublishedReview } from "@/lib/reviews/public";
 import { connection } from "next/server";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getMovies } from "@/lib/notion/movies";
-import { parseMovieId, isCanonicalMovieSlug, movieHref } from "@/lib/movies/slug";
+import {
+  parseMovieId,
+  isCanonicalMovieSlug,
+  movieHref,
+} from "@/lib/movies/slug";
 import { relatedMovies } from "@/lib/movies/discovery";
 import { usableCover } from "@/lib/movies/cover";
 import { splitPeople } from "@/lib/stats/aggregate";
@@ -25,9 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!movie)
     return { title: "영화를 찾을 수 없습니다", robots: { index: false } };
   const title = movie.title || "제목 없음";
-  const description =
-    movie.oneLineReview ||
-    `${title}의 영화 정보와 평점. FILM STOCK 개인 영화 아카이브.`;
+  const review = await getPublishedReview(movie.id);
+  const description = `${(movie.oneLineReview || `${title}의 영화 정보와 평점.`).slice(0, 140)}${review ? " FILM STOCK의 긴 리뷰를 만나보세요." : " FILM STOCK 개인 영화 아카이브."}`;
   return {
     title,
     description,
@@ -57,6 +63,8 @@ export default async function FilmDetail({ params }: Props) {
   if (!movie) notFound();
   if (!isCanonicalMovieSlug(slug, movie)) permanentRedirect(movieHref(movie));
   const related = relatedMovies(movie, movies);
+  const review = await getPublishedReview(movie.id);
+  const published = await getPublishedIds();
   const url = `${siteUrl()}${movieHref(movie)}`;
   const fields = [
     ["감독", movie.director],
@@ -99,9 +107,12 @@ export default async function FilmDetail({ params }: Props) {
             ))}
           </dl>
           <ShareButtons title={movie.title} url={url} />
+          <Suspense fallback={null}>
+            <ReviewAction pageId={movie.id} href={movieHref(movie)} />
+          </Suspense>
         </div>
       </section>
-      <ReviewSection />
+      <ReviewSection review={review} />
       {related.length > 0 && (
         <section className="related-section">
           <div className="section-heading">
@@ -112,7 +123,11 @@ export default async function FilmDetail({ params }: Props) {
           </div>
           <div className="movie-grid related-grid">
             {related.map((m) => (
-              <MovieCard key={m.id} movie={m} />
+              <MovieCard
+                key={m.id}
+                movie={m}
+                hasReview={published.has(m.id.toLowerCase())}
+              />
             ))}
           </div>
         </section>

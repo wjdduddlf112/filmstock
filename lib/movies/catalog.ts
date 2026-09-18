@@ -19,6 +19,7 @@ export const filterLabels = {
   watchedYear: "관람연도",
   releaseYear: "개봉연도",
   tag: "태그",
+  review: "리뷰 여부",
 } as const;
 export type FilterKey = keyof typeof filterLabels;
 export type CatalogState = Record<FilterKey | "q", string> & {
@@ -51,6 +52,7 @@ export function parseCatalogState(query: Query): CatalogState {
     watchedYear: value("watchedYear"),
     releaseYear: value("releaseYear"),
     tag: value("tag"),
+    review: ["yes", "no"].includes(value("review")) ? value("review") : "",
     sort: Object.hasOwn(sortOptions, sort) ? (sort as Sort) : "watched-desc",
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,
   };
@@ -80,6 +82,7 @@ export function deriveFilterOptions(movies: Movie[]): FilterOptions {
     [...new Set(values.filter(Boolean))].sort(collator.compare);
   return {
     genre: unique(movies.flatMap((m) => m.genres)),
+    review: ["yes", "no"],
     country: unique(movies.flatMap((m) => m.countries)),
     ott: unique(movies.flatMap((m) => m.ott)),
     tag: unique(movies.flatMap((m) => m.tags)),
@@ -121,7 +124,11 @@ export function sortMovies(movies: Movie[], sort: Sort): Movie[] {
   });
 }
 
-export function queryMovies(movies: Movie[], state: CatalogState) {
+export function queryMovies(
+  movies: Movie[],
+  state: CatalogState,
+  published: ReadonlySet<string> = new Set(),
+) {
   const words = state.q.split(" ").filter(Boolean);
   const filtered = movies.filter((m) => {
     const haystack = normalizeSearch(
@@ -129,6 +136,8 @@ export function queryMovies(movies: Movie[], state: CatalogState) {
     );
     return (
       words.every((word) => haystack.includes(word)) &&
+      (!state.review ||
+        published.has(m.id.toLowerCase()) === (state.review === "yes")) &&
       (!state.genre || m.genres.includes(state.genre)) &&
       (!state.country || m.countries.includes(state.country)) &&
       (!state.ott || m.ott.includes(state.ott)) &&

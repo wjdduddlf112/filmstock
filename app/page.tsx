@@ -2,7 +2,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, ArrowRight } from "lucide-react";
 import { getMovies } from "@/lib/notion/movies";
-import { selectFeatured } from "@/lib/movies/discovery";
+import { selectHomeMovies } from "@/lib/reviews/helpers";
+import { getPublishedIds } from "@/lib/reviews/public";
 import { movieHref } from "@/lib/movies/slug";
 import { usableCover } from "@/lib/movies/cover";
 import { Poster } from "@/components/movie/Poster";
@@ -14,7 +15,8 @@ export const metadata = { alternates: { canonical: "/" } };
 export default async function Home() {
   await connection();
   const movies = await getMovies();
-  const [featured, ...picks] = selectFeatured(movies);
+  const published = await getPublishedIds();
+  const [featured, ...picks] = selectHomeMovies(movies, published);
   return (
     <div className="shell home-page">
       <div className="home-search">
@@ -35,6 +37,9 @@ export default async function Home() {
               </Link>
             </div>
             <div className="featured-copy">
+              {published.has(featured.id.toLowerCase()) && (
+                <span className="review-label">REVIEW</span>
+              )}
               <p className="eyebrow accent">IN THE SPOTLIGHT</p>
               <h1>{featured.title || "제목 없음"}</h1>
               <p className="featured-director">
@@ -69,7 +74,11 @@ export default async function Home() {
               </div>
               <div className="movie-grid home-grid">
                 {picks.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
+                  <MovieCard
+                    key={movie.id}
+                    movie={movie}
+                    hasReview={published.has(movie.id.toLowerCase())}
+                  />
                 ))}
               </div>
             </section>

@@ -1,6 +1,6 @@
 # FILM STOCK
 
-Notion FILM STOCK Main Data Source를 읽기 전용 CMS로 사용하는 공개 영화 아카이브입니다. Next.js 16 App Router, TypeScript, Tailwind CSS, 공식 `@notionhq/client`를 사용합니다. 영화 정보는 Notion이 source of truth이며 별도 DB는 없습니다.
+Notion FILM STOCK Main Data Source를 읽기 전용 영화 metadata CMS로 사용하는 공개 영화 아카이브입니다. Next.js 16 App Router, TypeScript, Tailwind CSS, 공식 `@notionhq/client`를 사용합니다. 영화 정보는 Notion, 긴 리뷰와 관리자 인증은 Supabase가 담당합니다.
 
 ## 설치 및 실행
 
@@ -10,13 +10,15 @@ Node.js 22.x와 npm이 필요합니다. Vercel에서도 Node 22 major를 사용�
 npm install
 ```
 
-루트에 `.env.local`을 만들고 아래 두 변수를 설정합니다. `.env.example`에는 변수 이름과 빈 값만 있습니다. 기존 `.env.local`이 있다면 덮어쓰지 마세요.
+루트 `.env.local`에 영화 조회용 Notion 변수와 CMS용 Supabase 변수를 설정합니다. GA와 사이트 URL은 선택 사항입니다. `.env.example`에는 변수 이름과 빈 값만 있습니다. 기존 `.env.local`이 있다면 덮어쓰지 마세요.
 
 ```dotenv
 NOTION_TOKEN=
 NOTION_DATA_SOURCE_ID=
 NEXT_PUBLIC_GA_ID=
 NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
 - `NOTION_TOKEN`: Notion integration의 토큰. Read content 권한을 부여하고 FILM STOCK 데이터베이스의 Connections에 해당 integration을 연결합니다.
@@ -48,9 +50,9 @@ Server Component → `lib/notion/movies.ts`의 캐시된 dataset → cache miss 
 - `components/movie/`: 포스터, 별점, 카드, 공유, 독립적인 ReviewSection. 카드에는 관람일을 표시하지 않습니다.
 - `components/filters/`: desktop sticky sidebar, native dialog 모바일 필터, URL 기반 정렬과 compact pagination.
 - `components/shared/`: 검색, 빈 상태, loading, 선택적 GA4.
-- `app/page.tsx`: 한줄평이 있는 영화에서 중복 없는 랜덤 4편.
-- `app/films/page.tsx`: 전체 영화 탐색. q, genre, country, ott, rating(최소 평점), watchedYear, releaseYear, tag, sort, page를 URL에 저장합니다. 각 facet은 단일 선택이며 서로 AND로 결합합니다. 필터 옵션은 실제 영화에서 추출합니다.
-- `app/film/[slug]/page.tsx`: 포스터, 핵심 메타데이터, 한줄평, 리뷰 빈 상태, 관련 영화 4편, 공유 및 동적 SEO.
+- `app/page.tsx`: 발행 리뷰 영화를 우선하고 한줄평 후보로 부족분을 채우는 중복 없는 랜덤 4편.
+- `app/films/page.tsx`: 전체 영화 탐색. q, genre, country, ott, rating(최소 평점), watchedYear, releaseYear, tag, review(yes/no), sort, page를 URL에 저장합니다. 각 facet은 단일 선택이며 서로 AND로 결합합니다. 영화 속성 옵션은 실제 영화에서 추출합니다.
+- `app/film/[slug]/page.tsx`: 포스터, 핵심 메타데이터, 한줄평, 발행 리뷰 또는 빈 상태, 관련 영화 4편, 공유 및 동적 SEO.
 - `app/stats/page.tsx`, `app/about/page.tsx`: 영화 통계와 사이트 소개.
 - `app/layout.tsx`, `app/globals.css`: 공통 메타데이터, Noto Sans KR, light/dark 및 반응형 스타일.
 - `app/error.tsx`, `app/not-found.tsx`, `app/loading.tsx`: 안전한 에러/404/로딩 처리.
@@ -103,11 +105,44 @@ PowerShell에서 실행 정책 문제가 있으면 `npm.cmd install`, `npm.cmd r
 
 공개 canonical 도메인은 `NEXT_PUBLIC_SITE_URL`로 설정하는 것을 권장합니다. GA4는 `NEXT_PUBLIC_GA_ID`가 있을 때만 활성화됩니다. 데이터 수집 정책에 맞게 활성화하세요. 로컬 검증 작업은 배포나 자동 push를 수행하지 않습니다.
 
-웹사이트에 표시된 영화 기록은 사이트 방문자가 읽을 수 있습니다. 이번 단계에는 인증이 없으므로 공개할 기록만 연결하세요.
+Notion 영화 metadata는 사이트 방문자가 읽을 수 있습니다. 리뷰는 Supabase에서 `published` 상태인 경우에만 공개합니다.
 
-## Phase 2
+## 관리자 로그인과 리뷰 CMS
 
-긴 리뷰는 현재 저장하지 않습니다. 상세의 `ReviewSection`은 빈 상태만 표시하며, Movie와 미래 Review domain을 섞지 않습니다. Supabase, 관리자 Google 로그인, editor, draft/private/published, autosave, preview, 좋아요 저장, 댓글, 뉴스레터, 이미지 업로드, Kakao SDK 및 개인화/AI 추천은 구현하지 않았습니다.
+Notion은 영화 metadata, Supabase는 관리자 인증 및 Markdown 긴 리뷰를 담당합니다. 기존 production의 `reviews`, `admin_users`와 RLS를 그대로 사용합니다. 이 프로젝트는 migration, 정책 변경, 첫 관리자 자동 등록을 실행하지 않습니다.
+
+로컬 `.env.local` 및 Vercel에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 설정합니다. `sb_publishable_` 키만 사용하며 secret/service_role/DB 비밀번호/Google Client Secret은 필요하지 않습니다. 이 값의 추가나 변경 후 개발 서버를 재시작하고 Vercel은 재빌드합니다.
+
+상단 로그인 아이콘에서 Google 로그인 → Supabase PKCE → `/auth/callback`의 code/session 교환 → 보던 공개 페이지(기본 `/`)로 돌아옵니다. 관리자는 계정 메뉴에서 관리자 화면을 별도로 열 수 있습니다. `/admin/login`도 유지하며, 보호된 편집 화면에서 시작한 로그인은 해당 화면으로 돌아옵니다. callback next는 허용된 로컬 공개/admin 경로만 받습니다. 운영 도메인과 사용하는 로컬 주소의 `/auth/callback`을 Supabase Redirect URLs에 등록해야 합니다. `localhost`와 `127.0.0.1`은 서로 다른 origin입니다.
+
+첫 로그인 후 관리자가 아니라고 나오는 것은 정상입니다. Supabase Auth Users에서 해당 사용자 UUID를 확인하고, 외부에서 기존 `admin_users.user_id`에 직접 등록하세요. 앱은 계정을 관리자에 자동 추가하지 않습니다. `admin_users`는 로그인 사용자가 자신의 membership 행을 SELECT할 수 있어야 합니다. 조회 권한이 없으면 앱은 접근을 거부하며 정책을 자동 수정하지 않습니다.
+
+관리자는 `/admin`에서 상태별 리뷰 수와 로그아웃을 사용할 수 있습니다. `/films`에서 영화를 선택한 뒤 상세의 리뷰 작성/수정 버튼으로 `/admin/film/[slug]/edit`에 진입합니다. 모든 보호 페이지와 저장 Server Action은 `getUser()`로 확인한 ID의 membership을 다시 검사합니다. Proxy는 세션 갱신과 private/no-store 헤더를 담당하며, 최종 쓰기 권한은 기존 RLS가 강제합니다.
+
+리뷰 연결 키는 전체 Notion page UUID인 `reviews.notion_page_id`입니다. 새 편집기의 Summary / View Point / Review 템플릿은 열기만 해서는 저장되지 않습니다. 첫 저장은 INSERT, 이후는 UPDATE이며 제목이나 URL short ID는 DB 키가 아닙니다.
+
+편집기는 Markdown textarea, 제목/굵게/기울임/링크/인용/구분선 도구, 공통 미리보기, 스포일러 설정, draft/private/published 선택을 제공합니다. 발행 전환 시 확인하며 `published_at`은 기존 DB 트리거에 맡깁니다. 본문 최대 길이는 200,000자입니다. 임의 HTML은 실행하지 않으며 Markdown 이미지는 이 단계에서 본문 이미지로 로드하지 않습니다.
+
+입력이 4초 멈추고 변경이 있을 때 자동 저장합니다. 요청은 순서대로 보내며 매 저장 응답의 `updated_at`을 다음 조건부 UPDATE에 사용합니다. 서버는 수정 시각을 갱신하고, 다른 탭에서 변경했거나 최초 INSERT가 충돌하면 덮어쓰지 않습니다. 충돌·인증 만료 때는 글을 보관한 뒤 새로고침/재로그인하세요. 실패한 글은 현재 textarea에 남지만 브라우저 종료 후 복구를 보장하는 오프라인 저장소는 아닙니다. 닫기/링크 이동 경고는 보조 장치이며 자동 저장 완료 표시를 확인하세요.
+
+공개 조회는 관리자 쿠키를 사용하지 않는 익명 클라이언트 + `status=published` 조건으로 수행합니다. 본문과 published ID 목록은 요청 범위 React cache로만 중복 조회를 줄이고, 공용 영구 캐시에 넣지 않습니다. 저장 후 공개 경로를 재검증합니다. 이미 열려 있는 다른 브라우저는 새로고침해야 변경이 보입니다. Films는 published ID를 500개 단위로 한 번 모아 Set으로 합치므로 카드마다 쿼리하지 않습니다.
+
+홈은 발행 리뷰 영화 4편 이상이면 해당 후보만, 1~3편이면 해당 후보 우선 + 기존 한줄평 후보로 채우며, 0편이면 기존 방식으로 동작합니다. 카드 REVIEW 배지와 Films 리뷰 여부 필터는 published만 기준으로 합니다. Supabase 미설정/장애 시 공개 영화 아카이브는 유지하고 리뷰는 없는 것으로 처리합니다. 공개 Stats에는 관리자 리뷰 상태를 섞지 않습니다.
+
+주요 파일:
+
+- `lib/supabase/`: 설정, browser, cookie 기반 server, 익명 public client.
+- `proxy.ts`, `lib/auth/`, `app/auth/callback/`: 세션 갱신, 회원 확인, 안전한 redirect.
+- `types/review.ts`, `lib/reviews/`: 독립 Review domain, public 조회, 입력 검증, 저장 큐.
+- `app/admin/`, `components/admin/`: 보호 페이지, 서버 저장, 로그인, 에디터.
+- `components/review/Markdown.tsx`: 미리보기와 공개 본문 공통 렌더러.
+- `tests/reviews.test.ts`: 권한 helper, redirect, 상태/입력, 후보/필터, 저장 순서/충돌, XSS 및 비공개 본문 차단 테스트.
+
+수동 검증: 미로그인 admin 접근 → 로그인 이동; 미등록 Google 계정 → 권한 없음; membership 등록 후 작성/자동 저장/재접속; 다른 탭 동시 수정 충돌; 발행 후 익명 창에서 본문/배지/필터 확인; 비공개 전환 후 새로고침하여 제거 확인; 로그아웃 후 관리자 접근 차단. 실제 Google OAuth, 권한 있는 저장 및 DB 트리거 동작은 해당 계정으로 검증해야 합니다. 테스트는 production에 리뷰를 만들거나 정책을 변경하지 않습니다.
+
+## 다음 확장
+
+좋아요 저장, 댓글, 뉴스레터, 이미지 업로드, 블록 편집기, 부분 스포일러, Kakao SDK, 개인화/AI 추천은 포함하지 않습니다.
 
 ## 공식 문서
 
@@ -115,3 +150,5 @@ PowerShell에서 실행 정책 문제가 있으면 `npm.cmd install`, `npm.cmd r
 - [Query a data source](https://developers.notion.com/reference/query-a-data-source)
 - [Next.js 설치](https://nextjs.org/docs/app/getting-started/installation)
 - [Next.js cacheLife](https://nextjs.org/docs/app/api-reference/functions/cacheLife)
+- [Supabase 공식 SSR 클라이언트](https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs)
+- [Supabase SSR 및 캐싱 주의사항](https://supabase.com/docs/guides/auth/server-side/advanced-guide)

@@ -4,7 +4,13 @@ import { movieHref } from "@/lib/movies/slug";
 import { usableCover } from "@/lib/movies/cover";
 import { Rating } from "./Rating";
 import { Poster } from "./Poster";
-export function MovieCard({ movie }: { movie: Movie }) {
+export function MovieCard({
+  movie,
+  hasReview = false,
+}: {
+  movie: Movie;
+  hasReview?: boolean;
+}) {
   return (
     <article className="movie-card">
       <Link
@@ -13,10 +19,8 @@ export function MovieCard({ movie }: { movie: Movie }) {
         className="movie-card-link"
       >
         <div className="card-visual">
-          <Poster
-            cover={usableCover(movie.cover)}
-            title={movie.title}
-          />
+          {hasReview && <span className="review-badge">REVIEW</span>}
+          <Poster cover={usableCover(movie.cover)} title={movie.title} />
           <dl className="card-hover-meta">
             <div>
               <dt>개봉</dt>

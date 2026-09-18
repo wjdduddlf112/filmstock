@@ -1,0 +1,150 @@
+.admin-page {
+  padding-block: 48px 90px;
+}
+.admin-state {
+  min-height: 65vh;
+  padding-block: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+}
+.admin-state h1 {
+  font-size: 30px;
+}
+.admin-state p {
+  max-width: 650px;
+  overflow-wrap: anywhere;
+}
+.admin-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding-block: 32px;
+  border-block: 1px solid var(--line);
+  margin-bottom: 32px;
+}
+.admin-counts dt {
+  color: var(--muted);
+}
+.admin-counts dd {
+  font-size: 32px;
+}
+.editor-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+.editor-film {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.editor-film h1 {
+  font-size: 26px;
+  margin-block: 6px;
+}
+.editor-poster {
+  aspect-ratio: 2/3;
+  position: relative;
+}
+.review-editor {
+  margin-top: 28px;
+}
+.editor-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.editor-settings label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.editor-settings select {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--text);
+  background: var(--bg);
+}
+.spoiler-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.editor-modes {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.editor-modes [aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+}
+.editor-save-state {
+  min-height: 48px;
+  padding-block: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.editor-save-state[data-error="true"] {
+  color: var(--accent);
+}
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+}
+.markdown-input {
+  width: 100%;
+  min-height: 600px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 28px;
+  line-height: 1.95;
+  font-size: 16px;
+  font-family: var(--font-noto), sans-serif;
+}
+.editor-preview {
+  min-height: 600px;
+  border-block: 1px solid var(--line);
+  padding-block: 32px;
+}
+@media (max-width: 550px) {
+  .admin-page {
+    padding-top: 28px;
+  }
+  .editor-settings {
+    gap: 12px;
+  }
+  .editor-settings label {
+    font-size: 13px;
+  }
+  .editor-film {
+    grid-template-columns: 75px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .editor-film h1 {
+    font-size: 22px;
+  }
+  .editor-modes {
+    margin-left: 0;
+  }
+  .markdown-input {
+    padding: 16px;
+    min-height: 65vh;
+  }
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/Header";
+import { HeaderAccount } from "@/components/layout/HeaderAccount";
 import { Footer } from "@/components/layout/Footer";
 import { themeScript } from "@/lib/theme";
 import { Analytics } from "@/components/shared/Analytics";
@@ -46,7 +47,13 @@ export default function RootLayout({
           본문으로 건너뛰기
         </a>
         <Suspense fallback={<div className="header-placeholder" />}>
-          <Header />
+          <Header
+            account={
+              <Suspense fallback={<span className="account-placeholder" />}>
+                <HeaderAccount />
+              </Suspense>
+            }
+          />
         </Suspense>
         <main id="main">
           <Suspense fallback={<Loading />}>{children}</Suspense>
