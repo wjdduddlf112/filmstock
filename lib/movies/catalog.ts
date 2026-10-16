@@ -35,7 +35,7 @@ export function normalizeSearch(value: string): string {
     .normalize("NFKC")
     .toLocaleLowerCase("ko")
     .trim()
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, "");
 }
 
 export function parseCatalogState(query: Query): CatalogState {
@@ -44,7 +44,7 @@ export function parseCatalogState(query: Query): CatalogState {
   const page = Number(value("page"));
   const sort = value("sort");
   return {
-    q: normalizeSearch(value("q")).slice(0, 300),
+    q: value("q").trim().slice(0, 300),
     genre: value("genre"),
     country: value("country"),
     ott: value("ott"),
@@ -129,13 +129,13 @@ export function queryMovies(
   state: CatalogState,
   published: ReadonlySet<string> = new Set(),
 ) {
-  const words = state.q.split(" ").filter(Boolean);
+  const query = normalizeSearch(state.q);
+  const words = state.q.trim().split(/\s+/).map(normalizeSearch).filter(Boolean);
   const filtered = movies.filter((m) => {
-    const haystack = normalizeSearch(
-      [m.title, m.director, m.actors, m.oneLineReview, ...m.tags].join(" "),
-    );
+    const fields = [m.title, m.director, m.actors, m.oneLineReview, ...m.genres, ...m.tags].map(normalizeSearch);
     return (
-      words.every((word) => haystack.includes(word)) &&
+      (!query || fields.some((field) => field.includes(query)) ||
+        words.every((word) => fields.some((field) => field.includes(word)))) &&
       (!state.review ||
         published.has(m.id.toLowerCase()) === (state.review === "yes")) &&
       (!state.genre || m.genres.includes(state.genre)) &&

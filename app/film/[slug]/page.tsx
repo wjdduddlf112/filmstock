@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ReviewAction } from "@/components/admin/ReviewAction";
@@ -13,6 +14,7 @@ import {
   movieHref,
 } from "@/lib/movies/slug";
 import { relatedMovies } from "@/lib/movies/discovery";
+import { catalogHref } from "@/lib/movies/catalog";
 import { usableCover } from "@/lib/movies/cover";
 import { splitPeople } from "@/lib/stats/aggregate";
 import { jsonLd, siteUrl } from "@/lib/seo/site";
@@ -66,14 +68,17 @@ export default async function FilmDetail({ params }: Props) {
   if (!isCanonicalMovieSlug(slug, movie)) permanentRedirect(movieHref(movie));
   const related = relatedMovies(movie, movies);
   const url = `${siteUrl()}${movieHref(movie)}`;
-  const fields = [
+  const fields: [string, ReactNode][] = [
     ["감독", movie.director],
     ["배우", movie.actors],
-    ["장르", movie.genres.join(" · ")],
+    ["장르", movie.genres.length ? <span className="metadata-chips">
+      {movie.genres.map((genre) => <Link className="metadata-chip" key={genre} href={catalogHref({ genre })}>{genre}</Link>)}
+    </span> : null],
     ["국가", movie.countries.join(" · ")],
     ["상영시간", movie.runtime === null ? "" : `${movie.runtime}분`],
     ["개봉일", movie.releaseDate?.slice(0, 10)],
   ];
+  if (movie.watchedDate) fields.push(["관람일", movie.watchedDate.slice(0, 10)]);
   return (
     <div className="shell detail-page">
       <Link className="back-link" href="/films">
@@ -105,6 +110,11 @@ export default async function FilmDetail({ params }: Props) {
                 <dd>{value || "미기록"}</dd>
               </div>
             ))}
+            {movie.tags.length > 0 && (
+              <div><dt>태그</dt><dd className="metadata-chips">
+                {movie.tags.map((tag) => <Link className="metadata-chip" key={tag} href={catalogHref({ tag })}>#{tag}</Link>)}
+              </dd></div>
+            )}
           </dl>
           <ShareButtons title={movie.title} url={url} />
           <Suspense fallback={null}>

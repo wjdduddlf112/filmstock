@@ -10,12 +10,14 @@ import { collectPages } from "./pagination";
 
 async function getCachedMovies(): Promise<Movie[]> {
   "use cache";
-  cacheLife({ stale: 60, revalidate: 1200, expire: 1800 });
+  cacheLife({ stale: 60, revalidate: 1800, expire: 2700 });
   cacheTag("filmstock-movies");
   const dataSourceId = process.env.NOTION_DATA_SOURCE_ID?.trim();
   if (!dataSourceId) throw new Error("Missing NOTION_DATA_SOURCE_ID");
 
   const notion = createNotionClient();
+  if (process.env.FILMSTOCK_CACHE_DEBUG === "1")
+    console.info("[FILM STOCK cache] Notion dataset refresh started");
   const pages = await collectPages((cursor) =>
     notion.dataSources.query({
       data_source_id: dataSourceId,
@@ -24,9 +26,12 @@ async function getCachedMovies(): Promise<Movie[]> {
     }),
   );
 
-  return sortMoviesByWatchedDate(
+  const movies = sortMoviesByWatchedDate(
     pages.filter(isFullPage).map(mapNotionPageToMovie),
   );
+  if (process.env.FILMSTOCK_CACHE_DEBUG === "1")
+    console.info("[FILM STOCK cache] Notion dataset refresh completed", movies.length);
+  return movies;
 }
 
 // Share a dataset across routes; also deduplicate metadata/page reads in one render.

@@ -895,6 +895,23 @@ dialog::backdrop {
 .detail-metadata dt {
   color: var(--muted);
 }
+.metadata-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.metadata-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.metadata-chip:hover, .metadata-chip:focus-visible {
+  color: var(--accent);
+  border-color: currentColor;
+}
 .share-area {
   margin-top: 24px;
 }

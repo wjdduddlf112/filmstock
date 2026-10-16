@@ -66,7 +66,7 @@ test("missing and out-of-range ratings do not invent a star rating", () => {
 });
 
 test("search normalizes unicode, case, whitespace and searches all specified fields", () => {
-  assert.equal(normalizeSearch("  FILM\n  Stock  "), "film stock");
+  assert.equal(normalizeSearch("  FILM\n  Stock  "), "filmstock");
   assert.equal(normalizeSearch("ＦＩＬＭ"), "film");
   const movies = [
     movie(1, {
@@ -83,12 +83,25 @@ test("search normalizes unicode, case, whitespace and searches all specified fie
     "some   actor",
     "좋은 장면",
     "다시 보기",
+    "필름 DIRECTOR",
   ])
     assert.equal(queryMovies(movies, parseCatalogState({ q })).total, 1);
   assert.equal(
     queryMovies(movies, parseCatalogState({ q: "없는 영화" })).total,
     0,
   );
+});
+
+test("search ignores whitespace in both query and every searchable field", () => {
+  for (const field of ["title", "director", "actors", "oneLineReview", "genres", "tags"] as const) {
+    for (const [stored, q] of [["남한산성", "남한 산성"], ["남한 산성", "남한산성"], ["죽은 시인의 사회", "죽은시인의사회"], ["죽은시인의사회", "죽은\t시인의\u3000사회"], ["ＦＩＬＭ Stock", "filmstock"]]) {
+      const value = field === "genres" || field === "tags" ? [stored] : stored;
+      const movies = [movie(1, { [field]: value })];
+      assert.equal(queryMovies(movies, parseCatalogState({ q })).total, 1, `${field}: ${q}`);
+    }
+  }
+  const state = parseCatalogState({ q: "남한 산성", genre: "드라마", tag: "다시 보기" });
+  assert.deepEqual(parseCatalogState(Object.fromEntries(new URL(catalogHref(state), "https://example.test").searchParams)), state);
 });
 
 test("filters intersect and preserve zero ratings, years and URL state", () => {
