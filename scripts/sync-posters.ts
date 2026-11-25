@@ -1,4 +1,4 @@
-import { Client, isFullPage } from "@notionhq/client";
+import { Client, isFullPage, isNotionClientError } from "@notionhq/client";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rename, unlink, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
@@ -99,12 +99,15 @@ async function main() {
   const auth = process.env.NOTION_TOKEN?.trim();
   const dataSource = process.env.NOTION_DATA_SOURCE_ID?.trim();
   if (!auth || !dataSource) throw new Error("Set NOTION_TOKEN and NOTION_DATA_SOURCE_ID in Actions secrets");
+  if (!/^[a-f0-9]{32}$/i.test(dataSource.replace(/-/g, ""))) throw new Error("invalid_data_source_id");
+  console.log("Notion credentials present; querying movie data source.");
   const notion = new Client({ auth, notionVersion: "2026-03-11", timeoutMs: 20_000, logger: () => {} });
   const pages = await collectPages((cursor) => notion.dataSources.query({
     data_source_id: dataSource,
     page_size: 100,
     ...(cursor ? { start_cursor: cursor } : {}),
   }));
+  console.log("Notion query succeeded. Results:", pages.length);
   const full = pages.filter(isFullPage);
   if (full.length !== pages.length) throw new Error("Incomplete Notion pages; refusing to prune posters");
   const previous = JSON.parse(await readFile(manifestPath, "utf8")) as PosterManifest;
@@ -148,8 +151,26 @@ async function main() {
   }
   console.log(JSON.stringify({ pages: full.length, generated, reused, failed, unsupported }));
 }
-main().catch(() => {
+main().catch((error: unknown) => {
   // Do not print exception details containing signed URLs or request credentials.
-  console.error("Poster synchronization failed. Check Notion permissions, Actions secrets and source availability.");
+  if (isNotionClientError(error)) {
+    console.error("Notion API error code:", error.code);
+  } else if (error instanceof Error) {
+    const safeMessages = [
+      "Set NOTION_TOKEN and NOTION_DATA_SOURCE_ID in Actions secrets",
+      "invalid_data_source_id",
+      "Notion query result limit reached",
+      "Invalid Notion pagination cursor",
+      "Incomplete Notion pages; refusing to prune posters",
+      "Empty Notion dataset; refusing to prune posters",
+      "No poster could be processed; leaving manifest unchanged",
+    ];
+    const filesystemCodes = ["ENOENT", "EACCES", "ENOSPC", "EPERM"];
+    const code = (error as NodeJS.ErrnoException).code;
+    console.error("Poster synchronization failed:", safeMessages.includes(error.message)
+      ? error.message : code && filesystemCodes.includes(code) ? code : "unexpected_error");
+  } else {
+    console.error("Poster synchronization failed: unknown_error");
+  }
   process.exitCode = 1;
 });
