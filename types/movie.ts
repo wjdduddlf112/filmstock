@@ -1,5 +1,6 @@
 export type MovieCover = {
   url: string;
+  thumbnailUrl?: string;
   type: "file" | "external";
   expiresAt: string | null;
 };

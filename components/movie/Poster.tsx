@@ -2,7 +2,6 @@
 import Image from "next/image";
 import { useState } from "react";
 import { Film } from "lucide-react";
-import { canOptimizeCover } from "@/lib/movies/cover";
 import type { MovieCover } from "@/types/movie";
 
 export function Poster({
@@ -17,9 +16,7 @@ export function Poster({
   sizes?: string;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const [rawUrl, setRawUrl] = useState<string | null>(null);
-  const src = cover?.url;
-  const optimized = !!src && canOptimizeCover(src) && rawUrl !== src;
+  const src = priority ? cover?.url : cover?.thumbnailUrl ?? cover?.url;
   return (
     <div className="poster">
       {src && failedUrl !== src ? (
@@ -30,12 +27,9 @@ export function Poster({
           sizes={sizes}
           preload={priority}
           loading={priority ? undefined : "lazy"}
-          unoptimized={!optimized}
+          unoptimized
           referrerPolicy="no-referrer"
-          onError={() => {
-            if (optimized) setRawUrl(src);
-            else setFailedUrl(src);
-          }}
+          onError={() => setFailedUrl(src)}
         />
       ) : (
         <div

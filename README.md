@@ -76,7 +76,13 @@ Next.js 16 `cacheComponents`와 함수 단위 `use cache`를 사용합니다. da
 
 별점은 `ratingToStars`의 FILM STOCK 구간 매핑을 공통 Rating에서 사용합니다. 숫자 평점은 그대로 표시하며, 미입력/유효하지 않은 값과 정의되지 않은 1점 미만·5점 초과에는 별점을 만들지 않습니다.
 
-Notion file/external cover를 사용하며 signed URL과 expiry를 Movie에 매핑합니다. 30초 이내 만료되거나 이미 만료된 cover는 placeholder로 표시합니다. Next/Image 최적화는 제한된 Notion S3/Notion static/Unsplash 호스트에만 허용합니다. 다른 external URL은 서버 proxy 없이 브라우저가 원본을 로드합니다. 최적화 실패 시 원본을 한 번 시도하고, 원본도 실패하면 같은 2:3 비율의 placeholder로 대체합니다. 이미지 URL을 영구 저장하지 않으며, 오래 열어둔 화면은 새로고침하여 갱신합니다.
+Notion cover 원본 URL은 만료 시간을 검사하며, 사전 최적화 이미지가 있으면 해당 정적 WebP를 우선 사용합니다. Vercel 실시간 이미지 최적화는 모든 포스터에서 비활성화됩니다. 아직 동기화되지 않았거나 지원하지 않는 외부 호스트의 포스터는 기존 원본 URL을 직접 표시합니다. 이미지 로드 실패 시 placeholder를 표시합니다.
+
+### 포스터 동기화
+
+GitHub Actions의 `Sync film posters`는 매일 한국시간 04:17 및 수동 실행으로 Notion cover를 조회합니다. 영화 UUID와 원본 경로 해시를 비교하여 신규/변경 포스터만 480px·800px WebP로 변환합니다. 서명 쿼리가 갱신되어도 같은 파일이면 재변환하지 않습니다. 같은 URL의 외부 이미지 내용이 바뀐 경우 수동 실행의 `refresh_all`을 선택합니다. 기존 Vercel Git 배포가 커밋을 반영하면 정적 파일과 manifest가 함께 제공됩니다.
+
+저장소 Settings → Secrets and variables → Actions의 Repository secrets에 `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`를 직접 등록하고 Actions → Sync film posters → Run workflow를 실행합니다. Vercel의 환경변수는 자동 공유되지 않습니다. 봇 커밋 배포가 되지 않는 경우에만 main 브랜치용 Vercel Deploy Hook을 만들고 `VERCEL_DEPLOY_HOOK` secret을 추가합니다. 공개 저장소에는 공개 영화 포스터의 WebP 파일과 해시/경로만 커밋되며 토큰이나 서명 URL은 저장하지 않습니다. 원본 제공처의 이용 조건상 재배포할 수 있는 이미지만 동기화 대상 Notion cover로 사용합니다. 미지원 외부 호스트는 원본 표시를 유지합니다. 동기화 결과의 `failed`, `unsupported` 수를 확인하세요. Supabase 설정 및 리뷰 저장 흐름은 변경하지 않습니다.
 
 Noto Sans KR는 next/font로 빌드 시 받아 자체 제공하므로 최초 빌드에는 폰트 다운로드 네트워크 접근이 필요합니다. 아이콘은 lucide-react를 사용합니다.
 

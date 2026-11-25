@@ -7,6 +7,7 @@ import type { Movie } from "@/types/movie";
 import { createNotionClient } from "./client";
 import { mapNotionPageToMovie, sortMoviesByWatchedDate } from "./mapper";
 import { collectPages } from "./pagination";
+import { withPreoptimizedPoster } from "@/lib/movies/preoptimized-poster";
 
 async function getCachedMovies(): Promise<Movie[]> {
   "use cache";
@@ -27,7 +28,7 @@ async function getCachedMovies(): Promise<Movie[]> {
   );
 
   const movies = sortMoviesByWatchedDate(
-    pages.filter(isFullPage).map(mapNotionPageToMovie),
+    pages.filter(isFullPage).map(mapNotionPageToMovie).map((movie) => withPreoptimizedPoster(movie)),
   );
   if (process.env.FILMSTOCK_CACHE_DEBUG === "1")
     console.info("[FILM STOCK cache] Notion dataset refresh completed", movies.length);
