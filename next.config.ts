@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   agentRules: false,
   cacheComponents: true,
   images: {
-    minimumCacheTTL: 60,
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
